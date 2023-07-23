@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SkeletonGenerator.Domain;
 
-namespace ExtractPublicMethods
+namespace CSharpParser
 {
     internal class CSharpParser
     {
