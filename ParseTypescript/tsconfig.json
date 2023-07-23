@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "NodeNext",
+        "sourceMap": true,
+        "outDir": "dist",
+        "rootDir": "src",
+        "removeComments": true,
+        "noImplicitAny": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true
+    }
+}
