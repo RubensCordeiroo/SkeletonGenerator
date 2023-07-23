@@ -1,5 +1,5 @@
 
-export interface Source {
+export interface SourceModel {
     path: string;
     classes: ClassModel[];
     enums: EnumModel[];
