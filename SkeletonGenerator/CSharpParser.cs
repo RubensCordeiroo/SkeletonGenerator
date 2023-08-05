@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SkeletonGenerator.Domain;
 
-namespace CSharpParser
+namespace SkeletonGenerator
 {
     internal class CSharpParser
     {
@@ -29,7 +29,6 @@ namespace CSharpParser
 
         private static List<ClassModel> GetClasses(SyntaxNode root)
         {
-
             var allClasses = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
             var result = new List<ClassModel>();
 
@@ -38,13 +37,15 @@ namespace CSharpParser
                 var properties = GetProperties(_class);
                 var methods = GetMethods(_class);
                 var constructors  = GetConstructorsModel(_class);
-
+                var modifier = GetModifier(_class.Modifiers);
                 var classModel = new ClassModel
                 {
                     Name = _class.Identifier.ValueText,
                     Properties = properties,
                     Methods = methods,
-                    Constructors = constructors
+                    Constructors = constructors,
+                    Modifier = modifier,
+                    Language = Language.CSharp
                 };
                 result.Add(classModel);
             }
@@ -61,12 +62,14 @@ namespace CSharpParser
             {
                 var properties = GetProperties(_interface);
                 var methods = GetMethods(_interface);
-
+                var modifier = GetModifier(_interface.Modifiers);
                 var interfaceModel = new InterfaceModel
                 {
                     Name = _interface.Identifier.ValueText,
                     Properties = properties,
-                    Methods = methods
+                    Methods = methods,
+                    Modifier = modifier,
+                    Language = Language.CSharp
                 };
                 result.Add(interfaceModel);
             }
@@ -76,16 +79,17 @@ namespace CSharpParser
         private static List<PropertyModel> GetProperties(SyntaxNode node)
         {
             var properties = node.DescendantNodes().OfType<PropertyDeclarationSyntax>()
-                                                   .Where(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)));
+                                                   .Where(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword) || m.IsKind(SyntaxKind.InternalKeyword) || m.IsKind(SyntaxKind.ProtectedKeyword)));
 
             var result = new List<PropertyModel>();
             foreach (var property in properties)
             {
+                var modifier = GetModifier(property.Modifiers);
                 var propertyModel = new PropertyModel
                 {
                     Name = property.Identifier.ValueText,
                     Type = property.Type.ToString(),
-                    IsStatic = property.Modifiers.Any(x => x.IsKind(SyntaxKind.StaticKeyword))
+                    Modifier = modifier
                 };
                 result.Add(propertyModel);
             }
@@ -102,12 +106,13 @@ namespace CSharpParser
             var parameters = GetParameters(node);
             foreach (var method in methods)
             {
+                var modifier = GetModifier(method.Modifiers);
                 var methodModel = new MethodModel
                 {
                     Name = method.Identifier.ValueText,
                     ReturnType = method.ReturnType.ToString(),
-                    IsStatic = method.Modifiers.Any(x => x.IsKind(SyntaxKind.StaticKeyword)),
-                    Parameters = parameters
+                    Parameters = parameters,
+                    Modifier = modifier
                 };
                 result.Add(methodModel);
             }
@@ -118,17 +123,19 @@ namespace CSharpParser
         {
 
             var constructors = classDeclaration.DescendantNodes().OfType<ConstructorDeclarationSyntax>()
-                                             .Where(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)));
+                                               .Where(x => x.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)));
 
             var result = new List<ConstructorModel>();
 
             foreach (var constructor in constructors)
             {
                 var parameters = GetParameters(constructor);
+                var modifier = GetModifier(constructor.Modifiers);
                 var constructorModel = new ConstructorModel
                 {
                     Name = constructor.Identifier.ValueText,
-                    Parameters = parameters
+                    Parameters = parameters,
+                    Modifier = modifier
                 };
                 result.Add(constructorModel);
             }
@@ -158,10 +165,13 @@ namespace CSharpParser
 
             foreach (var _enum in allEnums)
             {
+                var modifier = GetModifier(_enum.Modifiers);
                 var enumModel = new EnumModel
                 {
                     Name = _enum.Identifier.ValueText,
-                    Values = GetEnumValues(_enum)
+                    Values = GetEnumValues(_enum),
+                    Modifier = modifier,
+                    Language = Language.CSharp
                 };
                 result.Add(enumModel);
             }
@@ -196,5 +206,30 @@ namespace CSharpParser
                                            FirstOrDefault()?.Token.ValueText ?? "no-value";
         }
 
+        private static ModifierKind GetModifier(SyntaxTokenList modifiers)
+        {
+
+            if (modifiers.Any(x => x.IsKind(SyntaxKind.StaticKeyword)))
+            {
+                return ModifierKind.Static;
+            }
+
+            if (modifiers.Any(x => x.IsKind(SyntaxKind.PublicKeyword)))
+            {
+                return ModifierKind.Public;
+            }
+
+            if (modifiers.Any(x => x.IsKind(SyntaxKind.InternalKeyword)))
+            {
+                return ModifierKind.Internal;
+            }
+
+            if (modifiers.Any(x => x.IsKind(SyntaxKind.ProtectedKeyword)))
+            {
+                return ModifierKind.Protected;
+            }
+            return ModifierKind.Private;
+        }
     }
+    
 }
