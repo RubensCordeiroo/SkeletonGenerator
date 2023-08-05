@@ -1,10 +1,16 @@
-import ts from "typescript";
+import ts, { ModifierLike, NodeArray } from "typescript";
 import fs from "fs";
-import { ClassModel, EnumModel, EnumValueModel, InterfaceModel, MethodModel, ParameterModel, PropertyModel, ConstructorModel, SourceModel } from "./domain.js";
+import {
+    ClassModel, EnumModel, EnumValueModel, InterfaceModel, MethodModel,
+    ParameterModel, PropertyModel, ConstructorModel, SourceModel, 
+    ModifierKind, Language
+} from "./domain.js";
+
+type ModifierDeclaration = { readonly modifiers?: NodeArray<ModifierLike> }
 
 export function parseSource(fullPath: string): SourceModel {
 
-    const fileName =  fullPath.split("\\").pop() ?? "no-name";
+    const fileName = fullPath.split("\\").pop() ?? "no-name";
     const code = fs.readFileSync(fullPath).toString();
     const sourceFile = ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true);
 
@@ -29,25 +35,28 @@ function parseClass(classDeclaration: ts.ClassDeclaration): ClassModel {
     const name = classDeclaration.name?.getText() ?? "no-name";
     const propertiesDeclaration = classDeclaration.members
         .filter((member) => ts.isPropertyDeclaration(member)
-            && member.modifiers?.some((md) => md.kind == ts.SyntaxKind.PublicKeyword)) as any as ts.PropertyDeclaration[];
+            && member.modifiers?.some((md) => md.kind == ts.SyntaxKind.PublicKeyword || md.kind == ts.SyntaxKind.ProtectedKeyword)) as any as ts.PropertyDeclaration[];
 
     const methodsDeclaration = classDeclaration.members.
         filter((member) => ts.isMethodDeclaration(member) &&
-            member.modifiers?.some((md) => md.kind == ts.SyntaxKind.PublicKeyword)) as any as ts.MethodDeclaration[]
+            member.modifiers?.some((md) => md.kind == ts.SyntaxKind.PublicKeyword || md.kind == ts.SyntaxKind.ProtectedKeyword)) as any as ts.MethodDeclaration[]
 
     const constructorParametersDeclaration = classDeclaration.members.
         filter((member) => ts.isConstructorDeclaration(member)) as any as ts.ConstructorDeclaration[]
 
     const constructors = constructorParametersDeclaration.map(parseConstructorParameter);
-    
+
     const properties = propertiesDeclaration.map(parseProperty);
     const methods = methodsDeclaration.map(parseMethod);
+    const modifier = getModifier(classDeclaration);
 
     return {
         name: name,
         properties: properties,
         methods: methods,
-        constructors: constructors
+        constructors: constructors,
+        modifier: modifier,
+        language: Language.TypeScript
     };
 }
 
@@ -55,9 +64,11 @@ function parseConstructorParameter(constructorDeclaration: ts.ConstructorDeclara
 
     const parameters = constructorDeclaration.parameters.map(parseParameter);
     const name = constructorDeclaration.name?.getText() ?? "no-name";
+    const modifier = getModifier(constructorDeclaration);
     return {
         name: name,
-        parameters: parameters
+        parameters: parameters,
+        modifier: modifier
     };
 }
 
@@ -77,10 +88,13 @@ function parseEnum(enumDeclaration: ts.EnumDeclaration): EnumModel {
     const name = enumDeclaration.name?.getText() ?? "no-name";
     const valuesDeclaration = enumDeclaration.members;
     const values = valuesDeclaration.map(parseEnumValue);
+    const modifier = getModifier(enumDeclaration);
 
     return {
         name: name,
-        values: values
+        values: values,
+        modifier: modifier,
+        language: Language.TypeScript
     };
 }
 
@@ -95,11 +109,14 @@ function parseInterface(interfaceDeclaration: ts.InterfaceDeclaration): Interfac
 
     const properties = propertiesDeclaration.map(parseProperty);
     const methods = methodsDeclaration.map(parseMethod);
+    const modifier = getModifier(interfaceDeclaration);
 
     return {
         name: name,
         properties: properties,
-        methods: methods
+        methods: methods,
+        modifier: modifier,
+        language: Language.TypeScript
     };
 }
 
@@ -107,12 +124,12 @@ function parseProperty(propertyDeclaration: ts.PropertyDeclaration | ts.Property
 
     const name = propertyDeclaration.name?.getText() ?? "no-name";
     const type = propertyDeclaration.type?.getText() ?? "any";
-    const isStatic = propertyDeclaration.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword) ?? false;
+    const modifier = getModifier(propertyDeclaration);
 
     return {
         name: name,
         type: type,
-        isStatic: isStatic
+        modifier: modifier
     };
 }
 
@@ -121,13 +138,13 @@ function parseMethod(methodDeclaration: ts.MethodDeclaration | ts.MethodSignatur
     const name = methodDeclaration.name?.getText() ?? "no-name";
     const parameters = methodDeclaration.parameters.map(parseParameter);
     const returnType = methodDeclaration.type?.getText() ?? "any";
-    const isStatic = methodDeclaration.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword) ?? false;
+    const modifier = getModifier(methodDeclaration);
 
     return {
         name: name,
         parameters: parameters,
         returnType: returnType,
-        isStatic: isStatic
+        modifier: modifier
     };
 }
 
@@ -185,4 +202,30 @@ function getAllInterfacesRecursiveInternal(allInterfaces: ts.InterfaceDeclaratio
         allInterfaces.push(node);
     }
     node.forEachChild(child => getAllInterfacesRecursiveInternal(allInterfaces, child));
+}
+
+
+
+function getModifier(classDeclaration: ModifierDeclaration): ModifierKind {
+
+    const modifiers = classDeclaration.modifiers;
+    if (modifiers == null) {
+        return ModifierKind.Public;
+    }
+
+    if (modifiers.some((md) => md.kind == ts.SyntaxKind.PublicKeyword)) {
+        return ModifierKind.Public;
+    }
+
+    if (modifiers.some((md) => md.kind == ts.SyntaxKind.ProtectedKeyword)) {
+        return ModifierKind.Protected;
+    }
+
+    if (modifiers.some((md) => md.kind == ts.SyntaxKind.PrivateKeyword)) {
+        return ModifierKind.Private;
+    }
+
+    return ModifierKind.Public;
+
+
 }
