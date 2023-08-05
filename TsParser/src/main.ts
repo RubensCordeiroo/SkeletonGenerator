@@ -12,7 +12,7 @@ if(args.length == 1){
         console.error("The file does not exist");
         process.exit(1);
     }
-
+ 
     const source = parseSource(fullPath);
     const json = JSON.stringify(source, null, 4);
     process.stdout.write(json);
@@ -47,10 +47,3 @@ if(env.NODE_ENV == "development"){
     }
     process.stdin.on("data", process.exit.bind(process, 0));
 }
-
-
-
-
-
- 
-
