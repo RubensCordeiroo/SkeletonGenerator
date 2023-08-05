@@ -11,24 +11,27 @@ export interface ClassModel {
     properties: PropertyModel[];
     methods: MethodModel[];
     constructors: ConstructorModel[];
+    modifier : ModifierKind;
+    language : Language;
 }
 
 export interface ConstructorModel {
-    name:string;
+    name: string;
     parameters: ParameterModel[];
+    modifier : ModifierKind;
 }
 
 export interface PropertyModel {
     name: string;
     type: string | null;
-    isStatic : boolean;
+    modifier : ModifierKind;
 }
 
 export interface MethodModel {
     name: string;
     parameters: ParameterModel[];
     returnType: string;
-    isStatic : boolean;
+    modifier : ModifierKind;
 }
 
 export interface ParameterModel {
@@ -36,18 +39,38 @@ export interface ParameterModel {
     type: string;
 }
 
-export interface EnumModel {
-    name: string;
-    values: EnumValueModel[];
-}
-
 export interface InterfaceModel {
     name: string;
     properties: PropertyModel[];
     methods: MethodModel[];
+    modifier : ModifierKind;
+    language : Language;
 }
+
+
+export interface EnumModel {
+    name: string;
+    values: EnumValueModel[];
+    modifier : ModifierKind;
+    language : Language;
+}
+
 
 export interface EnumValueModel {
     name: string;
     value: string;
+}
+
+export enum ModifierKind {
+    Public,
+    Private,
+    Protected,
+    Internal,
+    Static,
+}
+
+export enum Language
+{
+    CSharp,
+    TypeScript
 }
