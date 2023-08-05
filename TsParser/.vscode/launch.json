@@ -13,6 +13,9 @@
             ],
             "preLaunchTask": "tsc: build - tsconfig.json",
             "program": "${workspaceFolder}\\src\\main.ts",
+            "args": [
+                "D:\\OneDrive\\GitHub\\SneburBR\\Snebur.TS\\src\\Snebur.TS\\src\\Utilidade\\ArquivoUtil.ts"
+            ],
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ]
